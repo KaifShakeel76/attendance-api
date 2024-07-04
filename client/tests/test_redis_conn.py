@@ -21,9 +21,9 @@ def test_get_caching_data(mock_open):
 
     assert result == {
         "CACHE_TYPE": "redis",
-        "CACHE_REDIS_HOST": "172.17.0.4",
+        "CACHE_REDIS_HOST": "localhost",
         "CACHE_REDIS_PORT": 6379,
-        "CACHE_REDIS_URL": "redis://172.17.0.4:6379/0"
+        "CACHE_REDIS_URL": "redis://localhost:6379/0"
     }
 
     # mock_open.assert_called_once_with('config.yaml', 'r', encoding="utf-8")
