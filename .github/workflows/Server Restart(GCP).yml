@@ -31,7 +31,7 @@ jobs:
         run: |
           INSTANCE_NAME=$(gcloud compute instances list \
             --filter="labels.name=${{ github.event.inputs.TAG_NAME }}" \
-            --format="get(name)" --zone="${{ github.event.inputs.ZONE }}")
+            --format="get(name)" --zones="${{ github.event.inputs.ZONE }}")
           echo "INSTANCE_NAME=$INSTANCE_NAME" >> $GITHUB_ENV
 
       - name: Stop the Instance
