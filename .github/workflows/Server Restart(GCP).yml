@@ -29,6 +29,7 @@ jobs:
       - name: Find Instance by Tag
         id: find-instance
         run: |
+          gcloud auth login
           echo "Looking for instance with tag '${{ github.event.inputs.TAG_NAME }}' in zone '${{ github.event.inputs.ZONE }}'..."
           INSTANCE_NAME=$(gcloud compute instances list \
             --filter="labels.name=${{ github.event.inputs.TAG_NAME }}" \
