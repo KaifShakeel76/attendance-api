@@ -32,20 +32,27 @@ jobs:
           INSTANCE_NAME=$(gcloud compute instances list \
             --filter="labels.name=${{ github.event.inputs.TAG_NAME }}" \
             --format="get(name)" --zones="${{ github.event.inputs.ZONE }}")
+          
+          if [ -z "$INSTANCE_NAME" ]; then
+            echo "No instance found with the tag '${{ github.event.inputs.TAG_NAME }}' in zone '${{ github.event.inputs.ZONE }}'."
+            exit 1
+          fi
+
+          echo "Found instance: $INSTANCE_NAME"
           echo "INSTANCE_NAME=$INSTANCE_NAME" >> $GITHUB_ENV
 
       - name: Stop the Instance
-        if: env.INSTANCE_NAME != ''
         run: |
-          gcloud compute instances stop $INSTANCE_NAME \
+          echo "Stopping instance: $INSTANCE_NAME"
+          gcloud compute instances stop "$INSTANCE_NAME" \
             --zone="${{ github.event.inputs.ZONE }}"
 
       - name: Start the Instance
-        if: env.INSTANCE_NAME != ''
         run: |
-          gcloud compute instances start $INSTANCE_NAME \
+          echo "Starting instance: $INSTANCE_NAME"
+          gcloud compute instances start "$INSTANCE_NAME" \
             --zone="${{ github.event.inputs.ZONE }}"
 
       - name: Instance Not Found
-        if: env.INSTANCE_NAME == ''
+        if: failure()
         run: echo "Instance with the tag ${{ github.event.inputs.TAG_NAME }} not found."
