@@ -25,6 +25,6 @@ jobs:
 
       - name: Delete logs on remote server
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ github.event.inputs.server_ip }} "rm -f ${{ github.event.inputs.logs_path }}/*.log"
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ github.event.inputs.server_ip }} "sudo rm -f ${{ github.event.inputs.logs_path }}/*.log"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
