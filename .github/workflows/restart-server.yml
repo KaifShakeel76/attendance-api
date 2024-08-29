@@ -1,0 +1,41 @@
+name: Restart Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name of the cloud server'
+        required: true
+      tag_value:
+        description: 'Tag value of the cloud server'
+        required: true
+
+jobs:
+  restart-server:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1  # Replace with your AWS region
+
+    - name: Restart EC2 Instance
+      run: |
+        instance_id=$(aws ec2 describe-instances \
+          --filters "Name=tag:${{ github.event.inputs.tag_name }},Values=${{ github.event.inputs.tag_value }}" \
+          --query "Reservations[*].Instances[*].InstanceId" \
+          --output text)
+
+        if [ -z "$instance_id" ]; then
+          echo "No instance found with the provided tag."
+          exit 1
+        fi
+
+        aws ec2 reboot-instances --instance-ids $instance_id
+        echo "Instance $instance_id restarted."
