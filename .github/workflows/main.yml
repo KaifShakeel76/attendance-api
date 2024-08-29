@@ -1,0 +1,47 @@
+name: Database Dump to GCP Bucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name of the GCP instance'
+        required: true
+      bucket_name:
+        description: 'GCP Bucket name where the dump will be stored'
+        required: true
+
+jobs:
+  dump-database:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Get instance ID by tag
+      id: get_instance
+      run: |
+        INSTANCE_ID=$(gcloud compute instances list --filter="labels.tag=${{ github.event.inputs.tag_name }}" --format="value(name)")
+        echo "INSTANCE_ID=${INSTANCE_ID}" >> $GITHUB_ENV
+
+    - name: Create SSH Key
+      run: |
+        ssh-keygen -t rsa -b 2048 -f ./gcp_ssh_key -N ""
+        gcloud compute instances add-metadata ${{ env.INSTANCE_ID }} --metadata ssh-keys="ubuntu:$(cat ./gcp_ssh_key.pub)"
+
+    - name: SSH into instance and dump database
+      run: |
+        ssh -i ./gcp_ssh_key -o "StrictHostKeyChecking=no" ubuntu@${{ env.INSTANCE_ID }} << 'EOF'
+        PGPASSWORD="${{ secrets.POSTGRES_PASSWORD }}" pg_dump -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -F c -b -v -f /tmp/db_backup.dump
+        EOF
+
+    - name: Sync dump to GCP Bucket
+      run: |
+        gcloud compute scp --recurse ubuntu@${{ env.INSTANCE_ID }}:/tmp/db_backup.dump ./db_backup.dump --zone=$(gcloud compute instances list --filter="labels.tag=${{ github.event.inputs.tag_name }}" --format="value(zone)")
+        gsutil cp ./db_backup.dump gs://${{ github.event.inputs.bucket_name }}/db_backup.dump
