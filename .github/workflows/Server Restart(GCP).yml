@@ -29,6 +29,7 @@ jobs:
       - name: Find Instance by Tag
         id: find-instance
         run: |
+          echo "Looking for instance with tag '${{ github.event.inputs.TAG_NAME }}' in zone '${{ github.event.inputs.ZONE }}'..."
           INSTANCE_NAME=$(gcloud compute instances list \
             --filter="labels.name=${{ github.event.inputs.TAG_NAME }}" \
             --format="get(name)" --zones="${{ github.event.inputs.ZONE }}")
@@ -53,6 +54,5 @@ jobs:
           gcloud compute instances start "$INSTANCE_NAME" \
             --zone="${{ github.event.inputs.ZONE }}"
 
-      - name: Instance Not Found
-        if: failure()
-        run: echo "Instance with the tag ${{ github.event.inputs.TAG_NAME }} not found."
+      - name: Success Message
+        run: echo "Instance $INSTANCE_NAME has been successfully restarted."
