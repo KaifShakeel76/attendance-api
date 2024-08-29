@@ -1,0 +1,30 @@
+name: Delete Logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      logs_path:
+        description: 'Path where logs are stored'
+        required: true
+      server_ip:
+        description: 'IP address of the server'
+        required: true
+
+jobs:
+  delete-logs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Delete logs on remote server
+        run: |
+          ssh -o StrictHostKeyChecking=no user@${{ github.event.inputs.server_ip }} "rm -f ${{ github.event.inputs.logs_path }}/*.log"
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
