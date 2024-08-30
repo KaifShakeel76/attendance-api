@@ -45,4 +45,6 @@ jobs:
     - name: Delete .log Files from the Instance
       run: |
         gcloud compute ssh ${{ github.event.inputs.instance_name }} \
-          --zone ${{ github.event.inputs.zone }} --tunnel-through-iap --command "sudo rm -f '${{ github.event.inputs.logs_path }}/*.log'" --quiet
+        --zone ${{ github.event.inputs.zone }} \
+        --tunnel-through-iap \
+        --troubleshoot
