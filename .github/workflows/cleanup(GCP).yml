@@ -1,4 +1,4 @@
-name: Delete Logs
+name: Delete Logs (GCP)
 
 on:
   workflow_dispatch:
