@@ -24,17 +24,15 @@ jobs:
     - name: Check out the repository
       uses: actions/checkout@v4
 
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        project_id: ${{ github.event.inputs.project_id }}
-        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
-      
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-        create_credentials_file: true
+      
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ github.event.inputs.project_id }}
 
     - name: Get Instance IP Address
       id: get-instance-ip
@@ -46,6 +44,6 @@ jobs:
 
     - name: Delete .log Files from the Instance
       run: |
-        gcloud compute ssh root@${{ env.INSTANCE_IP }} \
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
           --zone ${{ github.event.inputs.zone }} \
           --command "sudo rm -f ${{ github.event.inputs.logs_path }}/*.log"
