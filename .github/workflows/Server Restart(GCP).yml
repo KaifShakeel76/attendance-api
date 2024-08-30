@@ -56,7 +56,7 @@ jobs:
         run: |
           echo "Starting instance: $INSTANCE_NAME"
           gcloud compute instances start "$INSTANCE_NAME" \
-            --zones="${{ github.event.inputs.ZONE }}"
+            --zone="${{ github.event.inputs.ZONE }}"
 
       - name: Success Message
         run: echo "Instance $INSTANCE_NAME has been successfully restarted."
