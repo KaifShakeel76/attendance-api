@@ -1,0 +1,52 @@
+name: Delete Logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      logs_path:
+        description: 'Path where logs are stored'
+        required: true
+      server_ip:
+        description: 'IP address of the server'
+        required: true
+      gcp_project:
+        description: 'GCP Project ID'
+        required: true
+      gcp_zone:
+        description: 'GCP Zone'
+        required: true
+      instance_name:
+        description: 'GCP Instance Name'
+        required: true
+
+jobs:
+  delete-logs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ github.event.inputs.gcp_project }}
+          zone: ${{ github.event.inputs.gcp_zone }}
+
+      - name: Verify SSH connection
+        run: |
+          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone ${{ github.event.inputs.gcp_zone }} --command "echo 'SSH connection established!'"
+
+      - name: Delete logs on remote server
+        run: |
+          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone ${{ github.event.inputs.gcp_zone }} --command "if [ -d '${{ github.event.inputs.logs_path }}' ]; then sudo rm -f ${{ github.event.inputs.logs_path }}/*.log && echo 'Logs deleted successfully'; else echo 'Logs path does not exist'; fi"
+
+      - name: Notify environment
+        if: always()
+        run: |
+          echo "Logs were deleted on ${{ github.event.inputs.environment }} environment at ${{ github.event.inputs.logs_path }}"
