@@ -33,9 +33,21 @@ jobs:
       run: |
         gcloud compute config-ssh --quiet
 
+    - name: Verify Files
+      run: |
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
+        --zone ${{ github.event.inputs.zone }} \
+        --command "ls -la '${{ github.event.inputs.logs_path }}'"
+
+
     - name: Delete log files on GCP instance via SSH
       run: |
         gcloud compute ssh ${{ github.event.inputs.instance_name }} \
           --zone ${{ github.event.inputs.zone }} \
-          --tunnel-through-iap \
           --command "sudo find '${{ github.event.inputs.logs_path }}' -type f -name '*.log' -exec rm -f {} \;"
+   
+    - name: Ensure files are removed
+      run: |
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
+        --zone ${{ github.event.inputs.zone }} \
+        --command "ls -la '${{ github.event.inputs.logs_path }}'"
