@@ -6,6 +6,9 @@ on:
       instance_name:
         description: 'Name of the GCP Compute instance'
         required: true
+      zone:
+        description: 'Zone of the GCP Compute instance'
+        required: true
       logs_path:
         description: 'Path to the logs on the GCP Compute instance'
         required: true
