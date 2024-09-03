@@ -32,7 +32,7 @@ jobs:
     - name: Find and upload .sql files to GCP bucket
       run: |
         # Find all .sql files in the provided path
-        sql_files=$(ls ${{ github.event.inputs.dump_file_path }} | grep .sql)
+        sql_files=$(sudo ls ${{ github.event.inputs.dump_file_path }} | grep .sql)
 
         # Upload each .sql file to the specified GCP bucket
         for file in $sql_files; do
