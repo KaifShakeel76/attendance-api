@@ -6,6 +6,9 @@ on:
       instance_name:
         description: 'Name of the GCP instance'
         required: true
+      zone:
+        description: 'Zone of the GCP instance'
+        required: true
       bucket_name:
         description: 'GCP bucket name'
         required: true
@@ -28,14 +31,17 @@ jobs:
         service_account_key: ${{ secrets.GCP_SA_DB_KEY }}
         export_default_credentials: true
 
-
-    - name: Find and upload .sql files to GCP bucket
+    - name: SSH into the instance and list .sql files
       run: |
-        # Find all .sql files in the provided path
-        sql_files=$(find ${{ github.event.inputs.dump_file_path }} -type f -name "*.sql")
+        echo "SSH into the instance and list .sql files:"
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone=${{ github.event.inputs.zone }} --command="ls ${{ github.event.inputs.dump_file_path }}/*.sql" > sql_files_list.txt
 
-        # Upload each .sql file to the specified GCP bucket
-        for file in $sql_files; do
-          echo "Uploading $file to gs://${{ github.event.inputs.bucket_name }}/"
-          gsutil cp "$file" gs://${{ github.event.inputs.bucket_name }}/
-        done
+    - name: Copy .sql files to GCP bucket
+      run: |
+        echo "Copying .sql files to GCP bucket:"
+        while IFS= read -r file; do
+          if [ -n "$file" ]; then
+            echo "Copying $file to gs://${{ github.event.inputs.bucket_name }}/"
+            gcloud compute scp ${{ github.event.inputs.instance_name }}:${file} gs://${{ github.event.inputs.bucket_name }}/ --zone=${{ github.event.inputs.zone }}
+          fi
+        done < sql_files_list.txt
