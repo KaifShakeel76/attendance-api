@@ -33,6 +33,13 @@ jobs:
       run: |
         gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
+    - name: Prepare SSH keys
+      run: |
+        mkdir -p ~/.ssh
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
+          --zone=${{ github.event.inputs.zone }} \
+          --command="echo 'SSH key preparation complete'" || exit 0
+
     - name: SSH into the instance and list .sql files
       run: |
         gcloud compute ssh ${{ github.event.inputs.instance_name }} \
