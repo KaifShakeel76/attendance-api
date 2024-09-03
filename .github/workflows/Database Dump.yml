@@ -1,47 +1,36 @@
-name: Database Dump to GCP Bucket
+name: Sync Database Dump to GCP Bucket
 
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: 'Tag name of the GCP instance'
+      dump_file_path:
+        description: 'Path to the database dump file'
         required: true
       bucket_name:
-        description: 'GCP Bucket name where the dump will be stored'
+        description: 'GCP bucket name'
         required: true
 
 jobs:
-  dump-database:
+  sync-dump:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
+        version: 'latest'
         service_account_key: ${{ secrets.GCP_SA_DB_KEY }}
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        export_default_credentials: true
 
-    - name: Get instance ID by tag
-      id: get_instance
+    - name: Authenticate with Service Account
       run: |
-        INSTANCE_ID=$(gcloud compute instances list --filter="labels.tag=${{ github.event.inputs.tag_name }}" --format="value(name)")
-        echo "INSTANCE_ID=${INSTANCE_ID}" >> $GITHUB_ENV
+        echo "${{ secrets.GCP_SA_DB_KEY }}" > "${{ runner.temp }}/account.json"
+        gcloud auth activate-service-account --key-file="${{ runner.temp }}/account.json"
+        gcloud config set project YOUR_PROJECT_ID
 
-    - name: Create SSH Key
+    - name: Sync database dump to GCP bucket
       run: |
-        ssh-keygen -t rsa -b 2048 -f ./gcp_ssh_key -N ""
-        gcloud compute instances add-metadata ${{ env.INSTANCE_ID }} --metadata ssh-keys="ubuntu:$(cat ./gcp_ssh_key.pub)"
-
-    - name: SSH into instance and dump database
-      run: |
-        ssh -i ./gcp_ssh_key -o "StrictHostKeyChecking=no" ubuntu@${{ env.INSTANCE_ID }} << 'EOF'
-        PGPASSWORD="${{ secrets.POSTGRES_PASSWORD }}" pg_dump -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -F c -b -v -f /tmp/db_backup.dump
-        EOF
-
-    - name: Sync dump to GCP Bucket
-      run: |
-        gcloud compute scp --recurse ubuntu@${{ env.INSTANCE_ID }}:/tmp/db_backup.dump ./db_backup.dump --zone=$(gcloud compute instances list --filter="labels.tag=${{ github.event.inputs.tag_name }}" --format="value(zone)")
-        gsutil cp ./db_backup.dump gs://${{ github.event.inputs.bucket_name }}/db_backup.dump
+        gsutil cp ${{ github.event.inputs.dump_file_path }} gs://${{ github.event.inputs.bucket_name }}/
