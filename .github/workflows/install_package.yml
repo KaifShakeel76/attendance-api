@@ -6,9 +6,6 @@ on:
       package_name:
         description: 'Name of the package to install'
         required: true
-      package_version:
-        description: 'Version of the package to install'
-        required: true
 
 jobs:
   install-package:
@@ -20,9 +17,9 @@ jobs:
 
     - name: Install Package
       run: |
-        if [ -z "${{ github.event.inputs.package_name }}" ] || [ -z "${{ github.event.inputs.package_version }}" ]; then
-          echo "Package name or version not provided"
+        if [ -z "${{ github.event.inputs.package_name }}" ]; then
+          echo "Package name not provided"
           exit 1
         fi
         sudo apt-get update
-        sudo apt-get install -y "${{ github.event.inputs.package_name }}=${{ github.event.inputs.package_version }}"
+        sudo apt-get install -y "${{ github.event.inputs.package_name }}"
