@@ -28,9 +28,6 @@ jobs:
         service_account_key: ${{ secrets.GCP_SA_DB_KEY }}
         export_default_credentials: true
 
-    - name: List all the sql 
-      run: |
-        ls -l | grep .sql
 
     - name: Find and upload .sql files to GCP bucket
       run: |
@@ -42,7 +39,3 @@ jobs:
           echo "Uploading $file to gs://${{ github.event.inputs.bucket_name }}/"
           gsutil cp "$file" gs://${{ github.event.inputs.bucket_name }}/
         done
-
-    - name: Ensure all the files are deleted
-      run: |
-        ls -l
