@@ -12,6 +12,9 @@ on:
       dump_file_path:
         description: 'Path to the directory containing the .sql files'
         required: true
+      zone:
+        description: 'GCP zone where the instance is located'
+        required: true  # Add this input to specify the zone
 
 jobs:
   sync-dump:
@@ -34,13 +37,13 @@ jobs:
 
     - name: List GCP instances
       run: |
-        echo "Listing GCP instances..."
-        gcloud compute instances list --filter="name=${{ github.event.inputs.instance_name }}"
+        echo "Listing GCP instances in zone ${{ github.event.inputs.zone }}..."
+        gcloud compute instances list --filter="name=${{ github.event.inputs.instance_name }}" --zones="${{ github.event.inputs.zone }}"
 
     - name: SSH into GCP instance and upload .sql files
       run: |
-        echo "SSH into the instance: ${{ github.event.inputs.instance_name }}"
-        gcloud compute ssh ${{ github.event.inputs.instance_name }} --command "
+        echo "SSH into the instance: ${{ github.event.inputs.instance_name }} in zone ${{ github.event.inputs.zone }}"
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
           sql_files=\$(find ${{ github.event.inputs.dump_file_path }} -name '*.sql')
           for file in \$sql_files; do
             echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
