@@ -47,4 +47,9 @@ jobs:
         pwd
         cd ${{ github.event.inputs.dump_file_path }}
         pwd
+        sql_files=\$(find ${{ github.event.inputs.dump_file_path }} -name '*.sql')
+        for file in \$sql_files; do
+            echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
+            gcloud storage cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
+        done
         "
