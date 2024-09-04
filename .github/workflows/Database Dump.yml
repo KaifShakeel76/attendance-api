@@ -45,3 +45,4 @@ jobs:
         echo "SSH into the instance: ${{ github.event.inputs.instance_name }} in zone ${{ github.event.inputs.zone }}"
         gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
         pwd
+        "
