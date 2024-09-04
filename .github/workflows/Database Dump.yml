@@ -14,7 +14,7 @@ on:
         required: true
       zone:
         description: 'GCP zone where the instance is located'
-        required: true  # Add this input to specify the zone
+        required: true
 
 jobs:
   sync-dump:
@@ -50,6 +50,6 @@ jobs:
         sql_files=\$(find ${{ github.event.inputs.dump_file_path }} -name '*.sql')
         for file in \$sql_files; do
             echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
-            gcloud storage cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
+            gsutil cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
         done
         "
