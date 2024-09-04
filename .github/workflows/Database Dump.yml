@@ -6,9 +6,6 @@ on:
       instance_name:
         description: 'Name of the GCP instance'
         required: true
-      zone:
-        description: 'Zone of the GCP instance'
-        required: true
       bucket_name:
         description: 'GCP bucket name'
         required: true
@@ -24,33 +21,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
       with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SA_DB_KEY }}
+        export_default_credentials: true
 
-    - name: Set GCP Project
+    - name: Find and upload .sql files to GCP bucket
       run: |
-        gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-
-    - name: Prepare SSH keys
-      run: |
-        mkdir -p ~/.ssh
-        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
-          --zone=${{ github.event.inputs.zone }} \
-          --command="echo 'SSH key preparation complete'" || exit 0
-
-    - name: SSH into the instance and list .sql files
-      run: |
-        gcloud compute ssh ${{ github.event.inputs.instance_name }} \
-          --zone=${{ github.event.inputs.zone }} \
-          --command="ls ${{ github.event.inputs.dump_file_path }}/*.sql" > sql_files_list.txt
-
-    - name: Copy .sql files to GCP bucket
-      run: |
-        while IFS= read -r file; do
-          if [ -n "$file" ]; then
-            echo "Copying $file to gs://${{ github.event.inputs.bucket_name }}/"
-            gcloud compute scp ${{ github.event.inputs.instance_name }}:${file} gs://${{ github.event.inputs.bucket_name }}/ --zone=${{ github.event.inputs.zone }}
-          fi
-        done < sql_files_list.txt
+        sql_files=$(find ${{ github.event.inputs.dump_file_path }} -name "*.sql")
+        for file in $sql_files; do
+          echo "Uploading $file to gs://${{ github.event.inputs.bucket_name }}/"
+          gsutil cp "$file" gs://${{ github.event.inputs.bucket_name }}/
+        done
