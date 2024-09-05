@@ -1,51 +1,34 @@
-name: Sync Database Dump to GCP Bucket
+name: Upload SQL Files to GCS
 
 on:
   workflow_dispatch:
-    inputs:
-      instance_name:
-        description: 'Name of the GCP instance'
-        required: true
-      bucket_name:
-        description: 'GCP bucket name'
-        required: true
-      dump_file_path:
-        description: 'Path to the directory containing the .sql files'
-        required: true
-      zone:
-        description: 'GCP zone where the instance is located'
-        required: true
 
 jobs:
-  sync-dump:
+  upload-sql-files:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.TEMP_SECRET_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.TEMP_SECRET_KEY }}
 
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        version: 'latest'
+      - name: Set up SSH Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-    - name: List GCP instances
-      run: |
-        echo "Listing GCP instances in zone ${{ github.event.inputs.zone }}..."
-        gcloud compute instances list --filter="name=${{ github.event.inputs.instance_name }}" --zones="${{ github.event.inputs.zone }}"
-    - name: SSH into GCP instance and upload .sql files
-      run: |
-          echo "SSH into the instance: ${{ github.event.inputs.instance_name }} in zone ${{ github.event.inputs.zone }}"
-          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
-          cd ${{ github.event.inputs.dump_file_path }}
+      - name: SSH into the instance and upload SQL files
+        run: |
+          echo "SSH into the instance: ${{ secrets.INSTANCE_NAME }} in zone ${{ secrets.ZONE }}"
+          gcloud compute ssh ${{ secrets.SSH_USER }}@${{ secrets.INSTANCE_NAME }} --zone="${{ secrets.ZONE }}" --ssh-key-file=~/.ssh/id_rsa --command "
+          cd ${{ secrets.DUMP_FILE_PATH }}
           sql_files=\$(find . -name '*.sql')
           for file in \$sql_files; do
-              echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
-              gcloud storage cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
+              echo \"Uploading \$file to gs://${{ secrets.BUCKET_NAME }}/\"
+              gcloud storage cp \"\$file\" gs://${{ secrets.BUCKET_NAME }}/
           done
           "
