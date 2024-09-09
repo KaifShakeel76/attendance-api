@@ -46,6 +46,6 @@ jobs:
           sql_files=\$(find . -name '*.sql')
           for file in \$sql_files; do
               echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
-              gcloud storage cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
+              gsutils cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
           done
           "
