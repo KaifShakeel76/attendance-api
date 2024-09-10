@@ -1,0 +1,83 @@
+name: Sync Database Dump to GCP Bucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance_name:
+        description: 'Name of the GCP instance'
+        required: true
+        type: string
+      bucket_name:
+        description: 'GCP bucket name'
+        required: true
+        type: string
+      dump_file_path:
+        description: 'Path to the directory containing the .sql files'
+        required: true
+        type: string
+      zone:
+        description: 'GCP zone where the instance is located'
+        required: true
+        type: string
+
+jobs:
+  sync-dump:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        version: 'latest'
+
+    - name: List GCP instances
+      run: |
+        echo "Listing GCP instances in zone ${{ github.event.inputs.zone }}..."
+        gcloud compute instances list --filter="name=${{ github.event.inputs.instance_name }}" --zones="${{ github.event.inputs.zone }}" || { echo "Failed to list GCP instances"; exit 1; }
+
+    - name: SSH into GCP instance and navigate to directory
+      id: ssh
+      run: |
+        echo "Navigating to the directory on the instance: ${{ github.event.inputs.instance_name }}"
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
+        set -e
+        cd ${{ github.event.inputs.dump_file_path }} || { echo 'Directory not found'; exit 1; }
+        echo 'Current directory:'
+        pwd
+        echo 'Files in directory:'
+        ls -l
+        " || { echo "Failed to SSH into the instance or navigate directory"; exit 1; }
+
+    - name: Find .sql files
+      id: find_sql_files
+      run: |
+        echo "Finding .sql files..."
+        FILE_LIST=$(gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "cd ${{ github.event.inputs.dump_file_path }} && find $(pwd) -name '*.sql'" || { echo "Failed to find .sql files"; exit 1; })
+        echo "FILES=$FILE_LIST" >> $GITHUB_ENV
+
+    - name: Print found files
+      run: |
+        echo "Found files:"
+        echo "${{ env.FILES }}" || { echo "No .sql files found"; exit 1; }
+
+    - name: Upload .sql files to GCS root directory
+      run: |
+        echo "Uploading .sql files to gs://${{ github.event.inputs.bucket_name }}/"
+        for file in ${{ env.FILES }}; do
+          # Remove leading './' from file path
+          RELATIVE_PATH=$(echo $file | sed 's|^\./||')
+          
+          # Print the file path for debugging
+          echo "Uploading file: $RELATIVE_PATH"
+          
+          # Upload the file
+          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "gsutil cp $RELATIVE_PATH gs://${{ github.event.inputs.bucket_name }}/" || { echo "Failed to upload $RELATIVE_PATH"; exit 1; }
+        done
