@@ -6,15 +6,19 @@ on:
       instance_name:
         description: 'Name of the GCP instance'
         required: true
+        type: string
       bucket_name:
         description: 'GCP bucket name'
         required: true
+        type: string
       dump_file_path:
         description: 'Path to the directory containing the .sql files'
         required: true
+        type: string
       zone:
         description: 'GCP zone where the instance is located'
         required: true
+        type: string
 
 jobs:
   sync-dump:
@@ -27,7 +31,7 @@ jobs:
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
-        credentials_json: ${{ secrets.TEMP_SECRET_KEY }}
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
@@ -38,13 +42,27 @@ jobs:
       run: |
         echo "Listing GCP instances in zone ${{ github.event.inputs.zone }}..."
         gcloud compute instances list --filter="name=${{ github.event.inputs.instance_name }}" --zones="${{ github.event.inputs.zone }}"
-    - name: SSH into GCP instance and upload .sql files
+
+    - name: SSH into GCP instance
+      id: ssh
       run: |
-          echo "SSH into the instance: ${{ github.event.inputs.instance_name }} in zone ${{ github.event.inputs.zone }}"
-          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
-          sql_files=\$(find . -name '*.sql')
-          for file in \$sql_files; do
-              echo \"Uploading \$file to gs://${{ github.event.inputs.bucket_name }}/\"
-              gcloud storage cp \"\$file\" gs://${{ github.event.inputs.bucket_name }}/
-          done
-          "
+        echo "SSH into the instance: ${{ github.event.inputs.instance_name }} in zone ${{ github.event.inputs.zone }}"
+        gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "
+        echo 'Navigating to the directory...'
+        cd ${{ github.event.inputs.dump_file_path }}
+        "
+
+    - name: Find .sql files
+      id: find_sql_files
+      run: |
+        echo "Finding .sql files..."
+        FILE_LIST=$(gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "cd ${{ github.event.inputs.dump_file_path }} && find . -name '*.sql'")
+        echo "FILES=$FILE_LIST" >> $GITHUB_ENV
+
+    - name: Upload .sql files to GCS
+      run: |
+        echo "Uploading .sql files to gs://${{ github.event.inputs.bucket_name }}/"
+        for file in ${{ env.FILES }}; do
+          echo "Uploading $file..."
+          gcloud compute ssh ${{ github.event.inputs.instance_name }} --zone="${{ github.event.inputs.zone }}" --command "gsutil cp $file gs://${{ github.event.inputs.bucket_name }}/"
+        done
