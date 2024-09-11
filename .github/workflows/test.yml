@@ -9,9 +9,6 @@ on:
       ZONE:
         description: 'The GCP zone of the server'
         required: true
-      PROJECT_ID:
-        description: 'The GCP Project ID'
-        required: true
 
 jobs:
   restart-server:
@@ -30,7 +27,7 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ github.event.inputs.PROJECT_ID }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Find Instance by Tag
         id: find-instance
