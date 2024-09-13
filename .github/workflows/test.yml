@@ -25,11 +25,8 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
            token_format: 'access_token'
-           workload_identity_provider: "projects/976604417255/locations/global/workloadIdentityPools/github-actions-identity-pool-2/attribute.repository/KaifShakeel76/attendance-api"
-           #${{ secrets.WIF_PROVIDER }}
+           workload_identity_provider: "projects/976604417255/locations/global/workloadIdentityPools/github-actions-identity-pool-2/providers/github-actions-provider"
            service_account: "976604417255-compute@developer.gserviceaccount.com"
-           #${{ secrets.SA_EMAIL }}
-#          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
